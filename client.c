@@ -11,7 +11,7 @@
 #include <signal.h>
 #include <netdb.h>
 
-#define MYPORT 5555
+#define MYPORT 5454
 #define BACKLOG 10
 
 int main(int argc, char* argv[]){
@@ -61,73 +61,63 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
-	int is_connected=0;
-	do{
-		char buffer[10000];
-
-
-		if(send(sockfd, "list",4,0)==-1){ // equivalent for asking the list of usernames to server
-			perror("send failed for list");
-			exit(1);
-		}
-
-		int r = recv(sockfd, &buffer, 10000,0); // receives the list of usernames who we can text
-		if(r ==-1){
-			perror("recv failed");
-			exit(1);
-		}
-		sleep(5);
-		printf("%s\n",buffer);// print username
-
-		printf("Entrez le nom de la personne avec qui vous souhaitez communiquer : ");
-		fgets(recipient_username,20,stdin);
-		strtok(recipient_username,"\n");
-		// verify if the entered name is in the list
-		char *tmp = strstr(buffer, recipient_username);
-		printf("%s",tmp);
-
-		if(tmp){
-			is_connected=1;
-		} else {
-			printf("Mauvais nom d'utilisateur !");
-		}
-	}while(!is_connected); // continue to ask to
-
+	int is_connected=1;
 	socklen_t sin_size = sizeof(struct sockaddr_in);
-	system("clear");
-
 	pid_t pid = fork();
-	if(pid == 0){
-		//keep receiving messages here
-		printf("-----Début du chat avec %s-----\n",recipient_username);
+	if(pid == 0){ //processus fils gère la messagerie
+
+		do{
+			printf("Entrez 1 pour consulter la liste des utilisateurs connectés, 2 pour envoyer un message instantané, 3 pour quitter l’application\n");
+			int choice_c = getc(stdin);
+			//int	choice_i = choice_c - '0';
+
+			if(choice_c == 1){
+				char buffer[10000];
+				if(send(sockfd, "1", 4, 0)==-1){ // equivalent for asking the list of usernames to server
+					perror("send failed for list");
+					exit(1);
+				}
+				int r = recv(sockfd, &buffer, 10000,0); // receives the list of usernames who we can text
+				if(r ==-1){
+					perror("recv failed");
+					exit(1);
+				}
+				printf("%s\n",buffer);// print username
+			} else if (choice_c == 2){
+				char msg[400];
+
+				printf("Message pour : ");
+				fgets(recipient_username,20,stdin);
+				strtok(recipient_username, "\n");
+
+				printf("Message à envoyer (400 char. max.) : ");
+				fgets(msg,20,stdin);
+				strtok(msg, "\n");
+
+				strcat(msg,":");
+				strcat(msg,recipient_username);
+
+				if(send(sockfd, msg, 400, 0)==-1){
+					perror("send failed message");
+				}
+			} else if(choice_c == 3){
+				is_connected=0;
+			}
+
+		}while(is_connected && getpeername(sockfd,(struct sockaddr *)&serv_addr, &sin_size)==0);
+
+		return 0;
+
+	} else if (pid != 1){ // processus parent continue la reception des messages
 		do{
 			char received_msg[400];
-			/*if(recv(sockfd, &received_msg, 400,0)){
-				perror("reception failed message");
-			}*/
 			read(sockfd,received_msg,sizeof(received_msg));
-			printf(":> %s", received_msg);
-			printf("\n");
+			printf(":> %s\n", received_msg);
 			sleep(1);
 		}while(getpeername(sockfd,(struct sockaddr *)&serv_addr, &sin_size)==0);
-
-	} else if(pid != -1) {
-		//send messages here
-		sleep(1);
-		strtok(recipient_username,"\n");
-		do{
-			char tosend_msg[400];
-			printf(":> for %s : ", recipient_username);
-			fgets(tosend_msg,400,stdin);
-			strtok(my_username, "\n");
-			if(send(sockfd, tosend_msg, 400, 0)==-1){
-				perror("send failed message");
-			}
-		}while(getpeername(sockfd,(struct sockaddr *)&serv_addr, &sin_size)==0);
-	} else {
-		perror("Erreur durant le fork");
-		exit(1);
 	}
+
+
 	printf("Fermeture...");
 	close(sockfd);
 

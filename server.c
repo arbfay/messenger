@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define MYPORT 5555
+#define MYPORT 5454
 #define BACKLOG 10
 #define MAX_SIZE_R 10000
 
@@ -162,32 +162,35 @@ int main(void){
           perror("reception failed of message");
         }
 
-        if(strcmp(message, "list") == 0){
-          if(send(new_sfd, getClientsList(&connectedClients), strlen(message),0)==-1){// send the list of clients
+        if(strcmp(message, "1") == 0){
+          char * tmp2 = getClientsList(&connectedClients);
+          sleep(1);
+          if(send(new_sfd, tmp2, strlen(tmp2),0)==-1){// send the list of clients
             perror("send client list failed");
           }
         } else {
           // the message sent by clients is constructed this way :
-          // [recipient's name]: [message]
+          // [message]: [recipient's name]
           // split the received message with the data and send it in this structure:
-          // [sender's name]: [message]
-          char* recipient_username;
+          // [message]: [sender's name]
+          char* recipient_username="";
           char* sender_username="";
           char* msg_tosend="";
           char* final_msg="";
 
           strcat(sender_username,new_client.username);
-          strcat(sender_username, ": ");
+
 
           char* buf = strtok(message, ":");
-          recipient_username = buf;
+          msg_tosend = buf;
+          strcat(msg_tosend, ": ");
 
           while(buf != NULL){
-            strcat(msg_tosend,strtok(NULL, ":"));
+            strcat(recipient_username,strtok(NULL, ":"));
           }
 
-          strcat(final_msg, sender_username);
-          strcat(final_msg,msg_tosend);
+          strcat(final_msg, msg_tosend);
+          strcat(final_msg,sender_username);
 
           // send the message to the right user
           write(searchClientByUsername(&connectedClients, recipient_username), final_msg, strlen(msg_tosend));
