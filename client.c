@@ -15,12 +15,9 @@
 #define BACKLOG 10
 
 int main(int argc, char* argv[]){
-	// ask username
-
 	system("clear"); //clear the screen
 
 	char my_username[20];
-	char recipient_username[20];
 
 	printf("Quel sera votre surnom sur le réseau ? (max. 20 char)\n");
 	fgets(my_username,20,stdin);
@@ -56,7 +53,7 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
-	if(send(sockfd, my_username,20,0)==-1){ // first : send the username of this client
+	if(send(sockfd, my_username,20,0)==-1){ // first thing to do : send the username of this client
 		perror("send failed for username");
 		exit(1);
 	}
@@ -67,7 +64,6 @@ int main(int argc, char* argv[]){
 	pid_t pid = fork();
 	if(pid == 0){ //processus fils continue la reception des messages
 		do{
-			sleep(1);
 			int r;
 			char received_msg[1000];
 			received_msg[0]='\0';
@@ -81,66 +77,50 @@ int main(int argc, char* argv[]){
 			received_msg[0]='\0';
 		}while(getpeername(sockfd,(struct sockaddr *)&serv_addr, &sin_size)==0);
 
-	} else if (pid != 1){ // processus parent gère la messagerie
+	}
+	while(is_connected){
+		sleep(2);
+		printf("Entrez :\n- 1 pour consulter la liste des utilisateurs connectés\n- 2 pour envoyer un message instantané\n- 3 pour quitter l’application\n");
+		char choice_c;
+		while((choice_c = getchar()) != '1' && choice_c != '2' && choice_c != '3'); // This will eat up all other characters
 
-		while(is_connected){
-			sleep(1);
-			printf("Entrez :\n- 1 pour consulter la liste des utilisateurs connectés\n- 2 pour envoyer un message instantané\n- 3 pour quitter l’application\n");
-			char choice_c;
-			while((choice_c = getchar()) != '1' && choice_c != '2' && choice_c != '3'); // This will eat up all other characters
-			//int	choice_i = choice_c - '0';
-			if(choice_c == '1'){
-				//char buffer[10000];
-				if(send(sockfd, "1", 4, 0)==-1){ // equivalent for asking the list of usernames to server
-					perror("send failed for list");
-					exit(1);
-				}
-				/*if(!fork()){
-					int r = recv(sockfd, &buffer, 10000,0); // receives the list of usernames who we can text
-					if(r ==-1){
-						perror("recv failed");
-						exit(1);
-					} else {
-						printf("%s\n",buffer);// print username
-					}
-				} else {
-					sleep(1);
-				}*/
+		if(choice_c == '1'){
 
-
-			} else if (choice_c == '2'){
-				system("clear");
-				char msg[400];
-				char tmp[20];
-				//tmp[0]='\0';
-				size_t size;
-				sleep(1);
-
-				printf("A qui envoyer (max. 20 char) : \n");
-				fgets(tmp,sizeof(tmp),stdin);
-				strtok(tmp, "\n");
-
-				printf("tmp val : %s", tmp);
-				sleep(5);
-
-				printf("\nMessage à envoyer (400 char. max.) : \n");
-				fgets(msg,sizeof(msg),stdin);
-				strtok(msg, "\n");
-				sleep(5);
-
-				strcat(msg,":");
-				strcat(msg,tmp);
-
-				if(send(sockfd, msg, 400, 0)==-1){
-					perror("send failed message");
-				}
-			} else if(choice_c == '3'){
-				close(sockfd);
-				kill(pid,SIGKILL);
-				break;
+			if(send(sockfd, "1", 4, 0)==-1){ // equivalent for asking the list of usernames to server
+				perror("send failed for list");
+				exit(1);
 			}
+		} else if (choice_c == '2'){
+			system("clear");
+			char msg[400];
+			char tmp[20]; // recipient username
+			//tmp[0]='\0';
+			size_t size;
+			sleep(1);
+
+			printf("A qui envoyer (max. 20 char) : \n");
+			fgets(tmp,sizeof(tmp),stdin);
+			strtok(tmp, "\n");
+
+			printf("tmp val : %s", tmp);
+			sleep(5);
+
+			printf("\nMessage à envoyer (400 char. max.) : \n");
+			fgets(msg,sizeof(msg),stdin);
+			strtok(msg, "\n");
+			sleep(5);
+
+			strcat(msg,":");
+			strcat(msg,tmp);
+
+			if(send(sockfd, msg, 400, 0)==-1){
+				perror("send failed message");
+			}
+		} else if(choice_c == '3'){
+			close(sockfd);
+			kill(pid,SIGKILL);
+			break;
 		}
-		exit(1);
 	}
 
 

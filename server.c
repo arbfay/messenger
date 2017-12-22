@@ -55,10 +55,6 @@ char* getClientsList(struct clientList *clients){
   return dst;
 }
 
-int insertClient(struct clientList *clients, struct clientStruct *newClient){
-  return 1;
-}
-
 int deleteClient(struct clientList *clients, int index){
   if(index >= clients->size){
     return 0;
@@ -95,8 +91,6 @@ int main(void){
 	memset(&(my_addr.sin_zero),'\0',8);
   printf("sockaddr \n");
 
-	// show host ip addr
-	//printf("Hostname: %s", inet_ntoa(my_addr.sin_addr));
 
 	// bind the socket to my_addr
 	int b = bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr));
@@ -137,10 +131,6 @@ int main(void){
     new_client.ipaddr = inet_ntoa(connector_addr.sin_addr);
     new_client.username = username;
     new_client.sockfd = new_sfd;
-
-    /*if(insertClient(&connectedClients, &new_client) == 0){
-        perror("client insertion failed");
-    }*/
 
     //insert new client, realloc if necessary
     if(connectedClients.remaining == 0){
@@ -194,12 +184,8 @@ int main(void){
           strcat(final_msg,sender_username);
 
           // send the message to the right user
-          //searchClientByUsername(&connectedClients, recipient_username)
           send(new_sfd, final_msg, strlen(msg_tosend),0);
           sleep(1);
-          /*if(send(searchClientByUsername(&connectedClients, recipient_username), final_msg, strlen(msg_tosend),0) == -1){
-            perror("send msg failed");
-          }*/
         }
         free(message);
       }while(is_connected);
