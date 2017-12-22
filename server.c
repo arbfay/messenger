@@ -23,7 +23,7 @@ struct clientStruct{
 };
 
 struct clientList{
-	struct clientStruct * list; //tableau de vecteurs ["192.168.1.20", "Fayçal"]
+	struct clientStruct ** list; // choix d'une taille de l'array au début de manière arbitraire
 	int size; // current size of list
   int remaining; // remaining space
 };
@@ -31,15 +31,15 @@ struct clientList{
 int searchClientByUsername(struct clientList *clients, char* username){
   int max_iter = clients->size;
   for(int i = 0; i<max_iter; i++){
-    if(clients->list[i].username == username){
-      return clients->list[i].sockfd;
+    if(strcmp(clients->list[i]->username, username)==0){
+      return clients->list[i]->sockfd;
     }
   }
   return -1;
 }
 
 char* getClientsList(struct clientList *clients){
-  char buffer[MAX_SIZE_R] = "\nList of connected clients : \n";
+  char buffer[MAX_SIZE_R] = "\nListe des personnes connectées : \n";
   char src[25];
   char cst1[]="- ";
   char cst2[]="\n";
@@ -48,7 +48,7 @@ char* getClientsList(struct clientList *clients){
 	for(int i=0; i < si ;i++){
     strcpy(dst,buffer);
     strcpy(src,cst1);
-    strcat(src,clients->list[i].username);
+    strcat(src,clients->list[i]->username);
     strcat(src,cst2);
     strcat(dst,src);
 	}
@@ -56,16 +56,7 @@ char* getClientsList(struct clientList *clients){
 }
 
 int insertClient(struct clientList *clients, struct clientStruct *newClient){
-
-  if(searchClientByUsername(clients, newClient->username) == -1){// surnom déjà utilisé
-    (*clients).list[clients->size] = *newClient;
-    clients->remaining -=1;
-    clients->size +=1;
-    //printClientsList(clients);
-    return 1;
-  } else {
-    return 0;
-  }
+  return 1;
 }
 
 int deleteClient(struct clientList *clients, int index){
@@ -82,7 +73,7 @@ int deleteClient(struct clientList *clients, int index){
 
 int main(void){
 	struct clientList connectedClients;
-  connectedClients.list = (struct clientStruct *) malloc(sizeof(struct clientStruct));
+  connectedClients.list = (struct clientStruct **) malloc(sizeof(struct clientStruct *));
 	connectedClients.size = 0;
   connectedClients.remaining=1;
 	// initiliaze useful variables
@@ -94,9 +85,7 @@ int main(void){
 	if(sockfd == -1){
 		perror("socket failed");
 		exit(1);
-	} else {
-    printf("socket success \n");
-  }
+	}
 
 	// create a sockaddr
 	struct sockaddr_in my_addr;
@@ -114,18 +103,13 @@ int main(void){
 	if(b == -1){
 		perror("bind failed");
 		exit(1);
-	} else {
-    printf("binding success \n");
-  }
+	}
 	// listen on the socket
 	int l = listen(sockfd, BACKLOG);
 	if(l == -1){
 		perror("listen failed");
 		exit(1);
-	} else {
-
-    printf("Listening...\n");
-  }
+	}
 
 	while(1){
 		socklen_t sin_size = sizeof(struct sockaddr_in);
@@ -144,8 +128,6 @@ int main(void){
     strcat(welcome, username);
     strcat(welcome, ".\n");
 
-    printf("%s",welcome);
-
     if(send(new_sfd, welcome, strlen(welcome),0) == -1){
       perror("send welcome failed");
     }
@@ -156,25 +138,32 @@ int main(void){
     new_client.username = username;
     new_client.sockfd = new_sfd;
 
-    if(insertClient(&connectedClients, &new_client) < 1){
+    /*if(insertClient(&connectedClients, &new_client) == 0){
         perror("client insertion failed");
+    }*/
+
+    //insert new client, realloc if necessary
+    if(connectedClients.remaining == 0){
+      connectedClients.list = (struct clientStruct **) realloc((connectedClients.list), connectedClients.size * sizeof(struct clientStruct*));
+      connectedClients.remaining = connectedClients.size;
     }
+
+    connectedClients.list[connectedClients.size] = &new_client;
+    connectedClients.remaining -=1;
+    connectedClients.size +=1;
 
 		if(!fork()){ // Fork for managing the messaging
 
       // ------ Manage the selection of who to send message to in the client app -------
-
       int is_connected=1;
-
       do{
         char* message=(char*)malloc(sizeof(char)*400);
         if(recv(new_sfd, message, 400,0)==-1){ // receive the username
           perror("reception failed of message");
         }
 
-        if(strcmp(message, "list")==0){
-          message=getClientsList(&connectedClients);
-          if(send(new_sfd, message, strlen(message),0)==-1){// send the list of clients
+        if(strcmp(message, "list") == 0){
+          if(send(new_sfd, getClientsList(&connectedClients), strlen(message),0)==-1){// send the list of clients
             perror("send client list failed");
           }
         } else {

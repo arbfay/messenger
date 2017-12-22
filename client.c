@@ -50,15 +50,6 @@ int main(int argc, char* argv[]){
 	inet_aton(argv[1],&(serv_addr.sin_addr));
 	memset(&(serv_addr.sin_zero),'\0',8);
 
-	// bind the socket to my_addr
-	/*int b = bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr));
-	if(b == -1){
-		perror("bind failed");
-		exit(1);
-	} else {
-		printf("Binding successful");
-	}*/
-
 	int c = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(struct sockaddr));
 	if(c == -1){
 		perror("connect failed");
@@ -85,12 +76,12 @@ int main(int argc, char* argv[]){
 			perror("recv failed");
 			exit(1);
 		}
-		puts("recv list success");
+		sleep(5);
 		printf("%s\n",buffer);// print username
 
 		printf("Entrez le nom de la personne avec qui vous souhaitez communiquer : ");
 		fgets(recipient_username,20,stdin);
-
+		strtok(recipient_username,"\n");
 		// verify if the entered name is in the list
 		char *tmp = strstr(buffer, recipient_username);
 		printf("%s",tmp);
@@ -115,7 +106,7 @@ int main(int argc, char* argv[]){
 				perror("reception failed message");
 			}*/
 			read(sockfd,received_msg,sizeof(received_msg));
-			printf("TIME - %s", received_msg);
+			printf(":> %s", received_msg);
 			printf("\n");
 			sleep(1);
 		}while(getpeername(sockfd,(struct sockaddr *)&serv_addr, &sin_size)==0);
@@ -123,10 +114,12 @@ int main(int argc, char* argv[]){
 	} else if(pid != -1) {
 		//send messages here
 		sleep(1);
+		strtok(recipient_username,"\n");
 		do{
 			char tosend_msg[400];
-			printf("Message à envoyer à %s : ", recipient_username);
+			printf(":> for %s : ", recipient_username);
 			fgets(tosend_msg,400,stdin);
+			strtok(my_username, "\n");
 			if(send(sockfd, tosend_msg, 400, 0)==-1){
 				perror("send failed message");
 			}
