@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define MYPORT 5454
+#define MYPORT 5555
 #define BACKLOG 10
 #define MAX_SIZE_R 10000
 
@@ -161,7 +161,8 @@ int main(void){
         if(recv(new_sfd, message, 400,0)==-1){ // receive the username
           perror("reception failed of message");
         }
-
+        strtok(message,"\n");
+        printf("message recv : %s \n",message);
         if(strcmp(message, "1") == 0){
           char * tmp2 = getClientsList(&connectedClients);
           sleep(1);
@@ -193,7 +194,8 @@ int main(void){
           strcat(final_msg,sender_username);
 
           // send the message to the right user
-          write(searchClientByUsername(&connectedClients, recipient_username), final_msg, strlen(msg_tosend));
+          //searchClientByUsername(&connectedClients, recipient_username)
+          send(new_sfd, final_msg, strlen(msg_tosend),0);
           sleep(1);
           /*if(send(searchClientByUsername(&connectedClients, recipient_username), final_msg, strlen(msg_tosend),0) == -1){
             perror("send msg failed");
